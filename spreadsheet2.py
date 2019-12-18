@@ -112,9 +112,9 @@ def read_input_marks():
     math = worksheet.find("Input Math")
     ga = worksheet.find("Input GA")
 
-    english_mark = worksheet.cell(english.row, english.col + 1)
-    math_mark = worksheet.cell(math.row, math.col + 1)
-    ga_mark = worksheet.cell(ga.row, ga.col + 1)
+    english_mark = float(worksheet.cell(english.row, english.col + 1).value)
+    math_mark = float(worksheet.cell(math.row, math.col + 1).value)
+    ga_mark = float(worksheet.cell(ga.row, ga.col + 1).value)
 
     return [english_mark, math_mark, ga_mark]
 
@@ -125,7 +125,7 @@ def get_num_students(data):
 '''
 Generates line of best fit using linear equations / matrices
 Does so by minimising ||ax - b||, where:
-- a = [ < 1 ... 1 > < x_1 ... x_n > ] ^ T
+- a = [ < 1 ... 1 > | < x_1 ... x_n > ] ^ T
 - b = [ < y_1 ... y_n > ] ^ T
 Then solving (a^T * a) x = a^T * b
 '''
@@ -138,34 +138,31 @@ def equation_best_fit(data):
     marks_list = []
     selective_score_list = []
     for i in range(num_students):
-        mark = worksheet.cell(mark_cell.row + i, mark_cell.col).value
+        mark = float(worksheet.cell(mark_cell.row + i + 1, mark_cell.col).value)
         marks_list.append([1, mark])
-        selective_mark = worksheet.cell(sel_cell.row + i, sel_cell.col).value
+        selective_mark = float(worksheet.cell(sel_cell.row + i + 1, sel_cell.col).value)
         selective_score_list.append(selective_mark)
 
     matrix_a = array(marks_list)
     matrix_b = array(selective_score_list)
-    print(matrix_a)
-    print(matrix_b)
 
     lhs = matmul(matrix_a.transpose(), matrix_a)        # a^T * a
     rhs = matmul(matrix_a.transpose(), matrix_b)        # a^T * b
 
     # Solving linear equation to get a pair of solutions: (intercept, gradient)
     result = linalg.solve(lhs, rhs)
-    intercept = float(result[0, 0])
-    gradient =  float(result[1, 0])
+    intercept = float(result[0])
+    gradient =  float(result[1])
 
     return intercept, gradient
 
 def update_expected_mark(data):
     # calculate the weighted average mark to interpolate from line of best fit
-    input_marks = read_input_marks(data)
-    weighted_mark = weighted_corr_mark(data, input_marks[0], input_marks[1], input_marks[1])
+    input_marks = read_input_marks()
+    weighted_mark = weighted_corr_mark(data, input_marks[0], input_marks[1], input_marks[2])
 
-    interecept, gradient = equation_best_fit(data)
+    intercept, gradient = equation_best_fit(data)
     expected_selective_mark = intercept + gradient * weighted_mark
-    print(expected_selective_mark)
 
     cell = worksheet.find("Output Mark")
     worksheet.update_cell(cell.row, cell.col + 1, expected_selective_mark)
@@ -186,5 +183,4 @@ if __name__ == '__main__':
     update_sheet_correlation(data)
     update_sheet_weight(data)
     update_weighted_corr_mark(data)
-    equation_best_fit(data)
     update_expected_mark(data)
